@@ -1,10 +1,10 @@
-import random
 import numpy as np
 
 from .annotation import Annotation
 from .category import Category
 from .basic import Semantic
 from .image import Image
+import random
 
 
 class Dataset(Semantic):
@@ -17,7 +17,7 @@ class Dataset(Semantic):
         """
         Generates a dataset from a folder with XML and corresponding images
 
-        :param xml_folder:
+        :param xml_folder: 
         :type xml_folder: pathlib.Path
         :raise ImportError: Raised if xml_folder is a `pathlib.Path`
                             object and it cannot be imported
@@ -25,11 +25,11 @@ class Dataset(Semantic):
         dataset = cls(name)
         xml_list = []
         id_counter = 0
-
+        
         for ext in extensions:
             xml_list += list(xml_folder.glob(f"*.{ext}"))
         categories = []
-        for idx, imgp in enumerate(xml_list):
+        for idx, imgp in enumerate(xml_list):	        
             xml = bf.data(fromstring(open(imgp.with_suffix(".xml"),"r").read()))
             if "object" in xml["annotation"].keys():
                 if type(xml["annotation"]["object"]) is not list:
@@ -48,7 +48,7 @@ class Dataset(Semantic):
             image = Image.from_path(str(imgp))
             image.id = idx
             image.dataset = name
-
+            
 
             xml = bf.data(fromstring(open(imgp.with_suffix(".xml"),"r").read()))
             if "object" in xml["annotation"].keys():
@@ -70,21 +70,21 @@ class Dataset(Semantic):
                     image.add(fin_ann)
             dataset.add(image)
         return dataset
-
-
+    
+    
     @classmethod
     def from_coco(cls, coco_obj, name="COCO Datset"):
         """
         Generates a dataset from a COCO object or python dict
 
-        :param coco_obj:
+        :param coco_obj: 
         :type coco_obj: dict, pycocotools.coco.COCO
         :raise ImportError: Raised if coco_obj is a `pycocotools.coco.COCO`
                             object and it cannot be imported
         """
         if isinstance(coco_obj, dict):
             dataset = cls(name)
-
+            
             coco_info = coco_obj.get('info', [])
             coco_annotations = coco_obj.get('annotations', [])
             coco_images = coco_obj.get('images', [])
@@ -100,7 +100,7 @@ class Dataset(Semantic):
                 dataset.add(image)
 
             for annotation in coco_annotations:
-
+                
                 image_id = annotation.get('image_id')
                 category_id = annotation.get('category_id')
 
@@ -108,34 +108,34 @@ class Dataset(Semantic):
                 category = index_categories[category_id]
                 segmentation = annotation.get('segmentation')
                 metadata = annotation.get('metadata', {})
-
+                
                 # color can be stored in the metadata
                 color = annotation.get('color', metadata.get('color'))
 
                 annotation = Annotation(image, category, polygons=segmentation,\
                                         color=color, metadata=metadata)
                 dataset.add(annotation)
-
+            
             return dataset
-
+        
         from pycocotools.coco import COCO
         if isinstance(coco_obj, COCO):
             pass
-
+        
         return None
-
+    
+    annotations = {}
+    categories = {}
+    images = {}
+    
     def __init__(self, name, images=[], id=0, metadata={}):
-        self.annotations = {}
-        self.categories = {}
-        self.images = {}
         self.name = name
-        self._max_ann_id = None
-        self._max_img_id = None
+
         for image in images:
             image.index(self)
-
+        
         super(Dataset, self).__init__(id, metadata)
-
+    
     def add(self, image):
         """
         Adds image(s) to the current dataset
@@ -143,12 +143,11 @@ class Dataset(Semantic):
         :param image: list, object or path to add to dataset
         :type image: :class:`Image` :class:`Annotation`, list, typle, path
         """
-
         if isinstance(image, (list, tuple)):
             for img in image:
                 img.index(self)
             return
-
+        
         if isinstance(image, Annotation):
             annotation = image
             image = self.images.get(annotation.image.id)
@@ -159,9 +158,9 @@ class Dataset(Semantic):
 
         if isinstance(image, str):
             image = Image.from_path(image)
-
+                
         image.index(self)
-
+    
     def iter_images(self):
         """
         Generator to iterate over all images
@@ -184,17 +183,13 @@ class Dataset(Semantic):
         for _, category in self.categories.items():
             yield category
 
-    def split(self, ratios, random=False):
+    def split(self, ratios, random_bool=False):
         """
         Splits dataset images into mutiple sub datasets of the given ratios
-
         If a tuple of (1, 1, 2) was passed in the result would return 3 dataset
         objects of 25%, 25% and 50% of the images.
-
         .. code-block:: python
-
             percents = ratios / ratios.sum()
-
         :param ratios: ratios to split dataset into
         :type ratios: tuple, list
         :param random: randomize the images before spliting
@@ -215,22 +210,25 @@ class Dataset(Semantic):
         percents *= len(self.images) # how many images in each dataset
         percents = percents.round().astype(np.int) # prepare where we split
 
-        if random:
-            im = random.sample(list(self.images.keys()))
+        if random_bool:
+            im = random.sample(list(self.images.keys()),len(list(self.images.keys())))
         else:
             im = list(self.images.keys())
 
         splits = np.split(im, percents)
 
+
         datasets = []
         for idx, split in enumerate(splits):
-            tmp_images = []
-
-            for key in split:
+            dataset = Dataset("split" + str(idx))
+            dataset.images={}
+            dataset.annotations={}
+            for i,key in enumerate(split):
                 # get all images corresponding to the split's keys
-                tmp_images.append(self.images.get(key))
-
-            dataset = Dataset("split" + str(idx), images=tmp_images)
+                #tmp_images.append(self.images.get(key))
+                im=self.images.get(key)
+                dataset.add(im)
+            #dataset = Dataset("split" + str(idx), images=tmp_images)
             datasets.append(dataset)
 
         return datasets
@@ -242,15 +240,15 @@ class Dataset(Semantic):
             'images': [i.coco(include=False) for i in self.iter_images()],
             'annotations': [a.coco(include=False) for a in self.iter_annotations()]
         }
-
+        
         return coco
-
+    
     def yolo(self):
         yolo = {}
 
         for image in self.iter_images():
             yolo[image.path] = image.yolo()
-
+        
         return yolo
 
 

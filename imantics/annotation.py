@@ -1,4 +1,4 @@
-from lxml import etree as ET
+from lxml import etree as ET    
 from lxml.builder import E
 import numpy as np
 import json
@@ -23,28 +23,28 @@ class Annotation(Semantic):
         Creates annotation class from a mask
 
         :param image: image assoicated with annotation
-        :type image: :class:`Image`
+        :type image: :class:`Image` 
         :param category: category to label annotation
-        :type category: :class:`Category`
+        :type category: :class:`Category` 
         :param mask: mask to create annotation from
         :type mask: :class:`Mask`, numpy.ndarray, list
         """
         return cls(image=image, category=category, mask=mask)
-
+    
     @classmethod
     def from_bbox(cls, bbox, image=None, category=None):
         """
         Creates annotation from bounding box
 
         :param image: image assoicated with annotation
-        :type image: :class:`Image`
+        :type image: :class:`Image` 
         :param category: category to label annotation
-        :type category: :class:`Category`
+        :type category: :class:`Category` 
         :param polygons: bbox to create annotation from
         :type polygons: :class:`BBox`, list, tuple
         """
         return cls(image=image, category=category, bbox=bbox)
-
+    
     @classmethod
     def from_polygons(cls, polygons, image=None, category=None):
         """
@@ -53,7 +53,7 @@ class Annotation(Semantic):
         Accepts following format for lists:
 
         .. code-block:: python
-
+        
             # Segmentation Format
             [
                 [x1, y1, x2, y2, x3, y3,...],
@@ -71,14 +71,14 @@ class Annotation(Semantic):
                 [[x1, y1], [x2, y2], [x3, y3],...],
                 ...
             ]
-
+        
         *No sepcificaiton is reqiured between which
         format is used*
 
         :param image: image assoicated with annotation
-        :type image: :class:`Image`
+        :type image: :class:`Image` 
         :param category: category to label annotation
-        :type category: :class:`Category`
+        :type category: :class:`Category` 
         :param polygons: polygons to create annotation from
         :type polygons: :class:`Polygons`, list
         """
@@ -86,9 +86,9 @@ class Annotation(Semantic):
 
     def __init__(self, image=None, category=None, bbox=None, mask=None, polygons=None, id=0,\
                  color=None, metadata={}, width=0, height=0):
-
+        
         assert isinstance(id, int), "id must be an integer"
-        assert bbox is not None or mask is not None or polygons is not None, "you must provide a mask, bbox or polygon"
+        assert bbox or mask or polygons, "you must provide a mask, bbox or polygon"
 
         self.image = image
         self.width = width
@@ -98,7 +98,7 @@ class Annotation(Semantic):
         if image is not None:
             self.width = image.width
             self.height = image.height
-
+        
         self.category = category
         self.color = Color.create(color)
         self._c_bbox = BBox.create(bbox)
@@ -110,7 +110,7 @@ class Annotation(Semantic):
         self._init_with_polygons = self._c_polygons is not None
 
         if (self.width + self.height) <= 0:
-
+            
             if self._init_with_bbox:
                 self.width, self.height = self._c_bbox.max_point
 
@@ -125,7 +125,7 @@ class Annotation(Semantic):
         :class:`Mask` representation of the annotations
         """
         if not self._c_mask:
-
+            
             width = self.image.width
             height = self.image.height
 
@@ -133,7 +133,7 @@ class Annotation(Semantic):
                 self._c_mask = self.polygons.mask(width=self.width, height=self.height)
             else:
                 self._c_mask = self.bbox.mask(width=self.width, height=self.height)
-
+        
         return self._c_mask
 
     @property
@@ -161,7 +161,7 @@ class Annotation(Semantic):
         """
         :class:`BBox` repsentation of the annotations
         """
-        if not self._c_bbox:
+        if not self._c_bbox:   
             if self._init_with_polygons:
                 self._c_bbox = self.polygons.bbox()
             else:
@@ -178,7 +178,7 @@ class Annotation(Semantic):
             return self.mask.area()
         return self.bbox.area()
 
-    def index(self, image, dataset=None):
+    def index(self, image):
 
         annotation_index = image.annotations
         category_index = image.categories
@@ -187,19 +187,8 @@ class Annotation(Semantic):
             self.id = len(annotation_index) + 1
 
         # Increment index until not found
-        if dataset is None:
-            if annotation_index.get(self.id):
-                self.id = max(annotation_index.keys()) + 1
-
-        else:
-            if dataset._max_ann_id is None:
-                if annotation_index.get(self.id):
-                    self.id = max(annotation_index.keys()) + 1
-                    dataset._max_ann_id = self.id
-
-            else:
-                dataset._max_ann_id += 1
-                self.id = dataset._max_ann_id
+        if annotation_index.get(self.id):
+            self.id = max(annotation_index.keys()) + 1
 
         annotation_index[self.id] = self
 
@@ -215,6 +204,36 @@ class Annotation(Semantic):
             # Index category
             category_index[category_name] = self.category
 
+    """
+    def index(self, image):
+        
+        annotation_index = image.annotations
+        category_index = image.categories
+
+        if self.id < 1:
+            self.id = len(annotation_index) + 1
+        
+        found = annotation_index.get(self.id)
+        if found:
+            # Increment index until not found
+            self.id += 1
+            self.index(image)
+        else:
+            annotation_index[self.id] = self
+
+            # Category indexing should be case insenstive
+            category_name = self.category.name.lower()
+
+            # Check if category exists
+            category_found = category_index.get(category_name)
+            if category_found:
+                # Update category
+                self.category = category_found
+            else:
+                # Index category
+                category_index[category_name] = self.category
+    """
+    
     def set_image(self, image):
         """
         Sets the annotaiton image information
@@ -225,20 +244,20 @@ class Annotation(Semantic):
 
         if image is None:
             return
-
+        
         self.width = self.image.width
         self.height = self.image.height
 
         # Mask needs to be re-generated
         # self._c_mask = None
-
+    
     @property
     def size(self):
         """
         Tuple of width and height
         """
         return (self.width, self.height)
-
+    
     def truncated(self):
         return len(self.polygons.segmentation) > 1
 
@@ -279,38 +298,11 @@ class Annotation(Semantic):
 
         }
 
-        i = 0
-        while i < len(annotation['segmentation']):
-            if len(annotation['segmentation'][i]) == 2:
-                # discard segmentation that is only a point
-                annotation['segmentation'].pop(i)
-            elif len(annotation['segmentation'][i]) == 4:
-                # create another point in the middle of segmentation to
-                # avoid bug when using pycocotools, which thinks that a
-                # 4 value segmentation mask is a bounding box
-                polygon = annotation['segmentation'][i]
-                x1, y1, x2, y2 = polygon
-                if x2 == x1:
-                    x = x1
-                    y = (y2 + y1) // 2
-                elif y2 == y1:
-                    x = (x2 + x1) // 2
-                    y = y1
-                else:
-                    a = (y2 - y1) / (x2 - x1)
-                    b = y1 - a*x1
-                    x = (x2 + x1) // 2
-                    y = int(round(a*x + b))
-
-                new_segmentation = polygon[:2] + [x, y] + polygon[2:]
-                annotation['segmentation'][i] = new_segmentation
-                i += 1
-
         if include:
             image = category = {}
             if self.image:
                 image = self.image.coco(include=False)
-
+            
             if self.category:
                 category = self.category.coco()
 
@@ -341,7 +333,7 @@ class Annotation(Semantic):
             return "{} {:.5f} {:.5f} {:.5f} {:.5f}".format(label, x, y, width, height)
         else:
             return label, x, y, width, height
-
+    
     def voc(self):
 
         element = E('object',
@@ -356,9 +348,9 @@ class Annotation(Semantic):
                 E('ymax', str(self.bbox._ymax)),
             )
         )
-
+        
         return element
-
+    
     def save(self, file_path, style=COCO):
         with open(file_path, 'w') as fp:
             json.dump(self.export(style=style), fp)
@@ -366,7 +358,7 @@ class Annotation(Semantic):
 
 class BBox:
     """
-    Bounding Box is an enclosing retangular box for a image marking
+    Bounding Box is an enclosing retangular box for a image marking 
     """
 
     #: Value types of :class:`BBox`
@@ -388,7 +380,7 @@ class BBox:
         :returns: :class:`BBox` repersentation
         """
         return Mask.create(mask).bbox()
-
+    
     @classmethod
     def from_polygons(cls, polygons):
         """
@@ -399,7 +391,7 @@ class BBox:
         :returns: :class:`BBox` repersentation
         """
         return Polygons.create(polygons).bbox()
-
+    
     @classmethod
     def create(cls, bbox, style=None):
         """
@@ -409,12 +401,12 @@ class BBox:
         """
         if isinstance(bbox, BBox.INSTANCE_TYPES):
             return BBox(bbox, style=style)
-
+        
         if isinstance(bbox, BBox):
             return bbox
-
+        
         return None
-
+    
     @classmethod
     def empty(cls):
         """
@@ -430,7 +422,7 @@ class BBox:
         assert len(bbox) == 4
 
         self.style = style if style else BBox.MIN_MAX
-
+        
         self._xmin = int(bbox[0])
         self._ymin = int(bbox[1])
 
@@ -445,7 +437,7 @@ class BBox:
             self.height = int(bbox[3])
             self._xmax = self._xmin + self.width
             self._ymax = self._ymin + self.height
-
+        
     def area(self):
         return self.width * self.height
 
@@ -485,7 +477,7 @@ class BBox:
 
             mask = np.zeros((height, width))
             mask[self.min_point[1]:self.max_point[1], self.min_point[0]:self.max_point[0]] = 1
-
+                
             self._c_mask = Mask(mask)
 
         return self._c_mask
@@ -493,7 +485,7 @@ class BBox:
     def draw(self, image, color=None, thickness=2):
         """
         Draws a bounding box to the image array of shape (width, height, 3)
-
+        
         *This function modifies the image array*
 
         :param color: RGB color repersentation
@@ -519,7 +511,7 @@ class BBox:
         Maximum points of the bounding box (x2, y2)
         """
         return self._xmax, self._ymax
-
+    
     @property
     def top_right(self):
         """
@@ -529,7 +521,7 @@ class BBox:
              |        |
              |        |
             [ ]------[ ]
-
+        
         """
         return self._xmax, self._ymin
 
@@ -542,10 +534,10 @@ class BBox:
              |        |
              |        |
             [ ]------[ ]
-
+        
         """
         return self._xmin, self._ymin
-
+        
     @property
     def bottom_right(self):
         """
@@ -555,7 +547,7 @@ class BBox:
              |        |
              |        |
             [ ]------[X]
-
+        
         """
         return self._xmax, self._ymax
 
@@ -568,10 +560,10 @@ class BBox:
              |        |
              |        |
             [X]------[ ]
-
+        
         """
         return self._xmin, self._ymax
-
+    
     @property
     def size(self):
         """
@@ -588,14 +580,14 @@ class BBox:
 
     def __repr__(self):
         return repr(self.bbox())
-
+    
     def __str__(self):
         return str(self.bbox())
-
+    
     def __eq__(self, other):
         if isinstance(other, self.INSTANCE_TYPES):
             other = BBox(other)
-
+        
         if isinstance(other, BBox):
             return np.array_equal(self.bbox(style=self.MIN_MAX), other.bbox(style=self.MIN_MAX))
 
@@ -603,7 +595,7 @@ class BBox:
 
 
 class Polygons:
-
+    
     #: Polygon instance types
     INSTANCE_TYPES = (list, tuple)
 
@@ -628,18 +620,18 @@ class Polygons:
         :returns: :class:`Polygons` repersentation
         """
         return BBox.create(bbox).polygons()
-
+        
     @classmethod
     def create(cls, polygons):
 
         if isinstance(polygons, Polygons.INSTANCE_TYPES):
             return Polygons(polygons)
-
+        
         if isinstance(polygons, Polygons):
             return polygons
-
+            
         return None
-
+    
     _c_bbox = None
     _c_mask = None
 
@@ -648,7 +640,7 @@ class Polygons:
 
     def __init__(self, polygons):
         self.polygons = [np.array(polygon).flatten() for polygon in polygons]
-
+    
     def mask(self, width=None, height=None):
         """
         Returns or generates :class:`Mask` representation of polygons.
@@ -663,10 +655,10 @@ class Polygons:
 
             mask = np.zeros(size)
             mask = cv2.fillPoly(mask, self.points, 1)
-
+            
             self._c_mask = Mask(mask)
             self._c_mask._c_polygons = self
-
+        
         return self._c_mask
 
     def bbox(self):
@@ -709,14 +701,14 @@ class Polygons:
                 [[x1, y1], [x2, y2], [x3, y3], ...],
                 ...
             ]
-
+        
         """
         if not self._c_points:
             self._c_points = [
                 np.array(point).reshape(-1, 2).round().astype(int)
                 for point in self.polygons
             ]
-
+        
         return self._c_points
 
     @property
@@ -729,7 +721,7 @@ class Polygons:
                 [x1, y1, x2, y2, x3, y3, ...],
                 ...
             ]
-
+        
         """
         if not self._c_segmentation:
             self._c_segmentation = [polygon.tolist() for polygon in self.polygons]
@@ -739,7 +731,7 @@ class Polygons:
     def draw(self, image, color=None, thickness=3):
         """
         Draws the polygons to the image array of shape (width, height, 3)
-
+        
         *This function modifies the image array*
 
         :param color: RGB color repersentation
@@ -755,15 +747,15 @@ class Polygons:
     def __eq__(self, other):
         if isinstance(other, self.INSTANCE_TYPES):
             other = Polygons(other)
-
+        
         if isinstance(other, Polygons):
             for i in range(len(self.polygons)):
                 if not np.array_equal(self[i], other[i]):
                     return False
             return True
-
+    
         return False
-
+    
     def __getitem__(self, key):
         return self.polygons[key]
 
@@ -781,19 +773,19 @@ class Mask:
     @classmethod
     def from_polygons(cls, polygons):
         return Polygons.create(polygons).mask()
-
+    
     @classmethod
     def from_bbox(cls, bbox):
         return BBox.create(bbox).mask()
-
+            
     @classmethod
     def create(cls, mask):
         if isinstance(mask, Mask.INSTANCE_TYPES):
             return Mask(mask)
-
+        
         if isinstance(mask, Mask):
             return mask
-
+        
         return None
 
     _c_bbox = None
@@ -801,7 +793,7 @@ class Mask:
 
     def __init__(self, array):
         self.array = np.array(array, dtype=bool)
-
+    
     def bbox(self):
         """
         Returns or generates :class:`BBox` representation of mask.
@@ -825,7 +817,7 @@ class Mask:
             self._c_bbox._c_mask = self
 
         return self._c_bbox
-
+    
     def polygons(self):
         """
         Returns or generates :class:`Polygons` representation of mask.
@@ -846,7 +838,7 @@ class Mask:
             self._c_polygons._c_mask = self
 
         return self._c_polygons
-
+    
     def union(self, other):
         """
         Unites the array of the specified mask with this mask’s array and returns the result as a new mask.
@@ -857,9 +849,9 @@ class Mask:
         """
         if isinstance(other, np.ndarray):
             other = Mask(other)
-
+        
         return Mask(np.logical_or(self.array, other.array))
-
+    
     def __add__(self, other):
         return self.union(other)
 
@@ -876,7 +868,7 @@ class Mask:
             other = Mask(other)
 
         return Mask(np.logical_and(self.array, other.array))
-
+    
     def __mul__(self, other):
         return self.intersect(other)
 
@@ -890,34 +882,34 @@ class Mask:
         """
         i = self.intersect(other).sum()
         u = self.union(other).sum()
-
+        
         if i == 0 or u == 0:
             return 0
 
         return i / float(u)
-
+    
     def invert(self):
         """
         Inverts current mask
 
         :return: resulting :class:`Mask`
-        """
+        """        
         return Mask(np.invert(self.array))
-
+    
     def __invert__(self):
         return self.invert()
-
-    def draw(self, image, color=None, alpha=0.5):
+    
+    def draw(self, image, color=None, alpha=0.5): 
         """
         Draws current mask to the image array of shape (width, height, 3)
-
+        
         *This function modifies the image array*
 
         :param color: RGB color repersentation
         :type color: tuple, list
         :param alpha: opacity of mask
         :type alpha: float
-        """
+        """       
         color = Color.create(color).rgb
         image_copy = image.copy()
         for c in range(3):
@@ -938,7 +930,7 @@ class Mask:
         """
         if isinstance(other, np.ndarray):
             other = Mask(other)
-
+        
         return self.intersect(other.invert())
 
     def __sub__(self, other):
@@ -947,9 +939,9 @@ class Mask:
     def contains(self, item):
         """
         Checks whether a point (tuple), array or mask is within current mask.
-
+        
         Note: Masks and arrays must be fully contained to return True
-
+        
         :param item: object to check
         :return: bool if item is contained
         """
@@ -958,18 +950,18 @@ class Mask:
             for i in item:
                 array = array[i]
             return array
-
+        
         if isinstance(item, np.ndarray):
             item = Mask(item)
 
         if isinstance(item, Mask):
             return self.intersect(item).area() > 0
-
+        
         return False
 
     def __contains__(self, item):
         return self.contains(item)
-
+    
     def match(self, item, threshold=0.5):
         """
         Given a overlap threashold determines if masks match
@@ -986,22 +978,22 @@ class Mask:
 
     def area(self):
         return self.sum()
-
+    
     def __getitem__(self, key):
         return self.array[key]
-
+    
     def __setitem__(self, key, value):
         self.array[key] = value
-
+    
     def __eq__(self, other):
         if isinstance(other, (np.ndarray, list)):
             other = Mask(other)
-
+        
         if isinstance(other, Mask):
             return np.array_equal(self.array, other.array)
 
         return False
-
+    
     def __repr__(self):
         return repr(self.array)
 
