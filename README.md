@@ -1,13 +1,12 @@
 # A fixed version of the Image Semantics package
 Both the pip and git original versions of the imantics package have flow-breaking bugs.  
 The pip version cannot handle large datasets (which is fixed in latest git version)  
-The original git version fixes previous bug, but hangs when exporting the dataset to coco json.  
+The original git version fixes aforementionned bug, but hangs when exporting the dataset to coco json.  
 ## What is fixed here 
 - Dataset export fixed (based the code on the pip version) 
 - Handling of large dataset (cherry picked latest git) 
-- Fixed split of dataset in ratios (code is broken in latest git) 
-- Added a usage example (the original ones are a bit short / dont really work)
-
+- Fixed split of dataset in ratios (code is broken in latest git)  
+- Added a usage example (the original ones are a bit short / dont really work)  
 ## Installing
 
 ```
@@ -16,8 +15,9 @@ cd imantics
 pip install -U . 
 ```
 ## Usage 
-A tutorial is available in examples/tutorial.ipybn 
-It shows a short example of imantics coco workflow, although it is non functionnal because of the absence of data
+A new tutorial is available in examples/tutorial.ipybn  
+It shows a short example of imantics coco workflow.  
+Other examples are available in the examples/ directory 
 <p align="center">
   <a href="/jsbroks/imantics/stargazers">
     <img src="https://img.shields.io/github/stars/jsbroks/imantics.svg">
