@@ -15,7 +15,9 @@ git clone https://github.com/lunaticstraydog/imantics
 cd imantics
 pip install -U . 
 ```
-
+## Usage 
+A tutorial is available in examples/tutorial.ipybn 
+It shows a short example of imantics coco workflow, although it is non functionnal because of the absence of data
 <p align="center">
   <a href="/jsbroks/imantics/stargazers">
     <img src="https://img.shields.io/github/stars/jsbroks/imantics.svg">
